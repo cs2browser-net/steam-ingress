@@ -1,0 +1,22 @@
+{
+    "steam_api_keys": [],
+    "retrieval_filters": [
+        {
+            "limit": 10000,
+            "filter": {
+                "appid": 730,
+                "gamedir": "csgo",
+                "nor": {
+                    "name_match": [
+                        "Valve*"
+                    ],
+                    "gametype": "empty"
+                }
+            }
+        }
+    ],
+    "filtered_asn": [],
+    "expressions": {
+        "name == \"Fake Server\"": 2
+    }
+}
