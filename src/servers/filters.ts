@@ -6,7 +6,7 @@ const parser = new Parser();
 parser.functions.number = (x: any) => Number(x);
 parser.functions.string = (x: any) => String(x);
 parser.functions.startsWith = (x: any, y: any) => String(x).startsWith(String(y));
-parser.functions.includes = (x: any, y: any) => String(x).includes(String(y));
+parser.functions.includes = (x: any, y: any) => (x as string[]).includes(String(y));
 
 function countInstructions(filters: Filters): number {
     let count = 0;

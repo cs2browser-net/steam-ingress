@@ -29,7 +29,7 @@ async function FilterRequest(cfg: Config, url: string) {
             let status = 0
 
             for (const expression of Object.keys(cfg.expressions)) {
-                status = evaluateExpression(cfg, expression, server);
+                status = evaluateExpression(cfg, expression, { ...server, tags: server.gametype.split(",") });
                 if (status != 0) break;
             }
 
