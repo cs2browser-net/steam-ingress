@@ -16,36 +16,6 @@ const updateCache = async () => {
     for (const row of rows) {
         serverCache.add(row.address);
     }
-
-    // const insertData = rows.map((r) => {
-    //     const serverLocation = GetIPInfo(r.address.split(":")[0])
-
-    //     return {
-    //         ID: String(r.id),
-    //         Address: r.address,
-    //         Country: serverLocation.country,
-    //         Latitute: serverLocation.latitude,
-    //         Longitude: serverLocation.longitude,
-    //         Status: r.status,
-    //         LastUpdated: r.last_updated
-    //     }
-    // })
-
-    // const chunkSize = 4096;
-    // const chunks = [];
-    // for (let i = 0; i < insertData.length; i += chunkSize) {
-    //     chunks.push(insertData.slice(i, i + chunkSize));
-    // }
-
-    // var totalProcessed = 0;
-    // for (const chunk of chunks) {
-    //     await prisma.server.createMany({
-    //         data: chunk,
-    //         skipDuplicates: true
-    //     });
-    //     totalProcessed += chunk.length;
-    //     console.log(`Inserted ${totalProcessed} / ${insertData.length} servers`);
-    // }
 }
 
 (async () => {
