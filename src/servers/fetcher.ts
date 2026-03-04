@@ -1,4 +1,3 @@
-import { CreateDatabase } from "../db/mysql";
 import type { Config, Rules } from "../types/config"
 import type { ServerListResponse } from "../types/SteamAPI"
 import { buildFilters, evaluateExpression } from './filters'
@@ -52,8 +51,6 @@ async function RequestInformations(region: string, token: string, cfg: Config) {
 }
 
 export async function requestServers(cfg: Config) {
-    await CreateDatabase();
-
     if (tokenIndex + 1 == cfg.steam_api_keys.length) tokenIndex = 0;
     else tokenIndex++;
 
