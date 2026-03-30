@@ -1,6 +1,7 @@
 import { serverCache } from "../cache"
-import { prisma } from "../db/prisma";
 import { GetIPInfo } from "./iplookup";
+import { db } from "../db/drizzle";
+import { server } from "../../generated/drizzle/schema";
 
 export const AddServer = async (ip: string, status: number) => {
     serverCache.add(ip);
@@ -9,13 +10,12 @@ export const AddServer = async (ip: string, status: number) => {
 
     if (data.country == "cn" && ip.endsWith(":28000")) status = 9
 
-    await prisma.server.create({
-        data: {
-            Address: ip,
-            Status: status,
-            Country: data.country,
-            Latitute: data.latitude,
-            Longitude: data.longitude,
-        }
+    await db.insert(server).values({
+        id: crypto.randomUUID(),
+        address: ip,
+        status: status,
+        country: data.country,
+        latitute: data.latitude,
+        longitude: data.longitude
     })
 }
