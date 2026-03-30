@@ -1,13 +1,11 @@
 
-import { config } from "dotenv";
+import "dotenv/config";
 import { readFileSync } from "fs";
 import type { Config } from "./types/config";
 import { serverCache } from './cache'
 import { db } from "./db/drizzle";
 import { server } from "../generated/drizzle/schema";
 import { requestServers } from "./servers/fetcher";
-
-config()
 
 const cfg: Config = JSON.parse(readFileSync("data/config.json").toString());
 
