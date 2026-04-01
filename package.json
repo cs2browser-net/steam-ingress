@@ -3,9 +3,7 @@
     "version": "1.0.0",
     "description": "",
     "main": "index.js",
-    "scripts": {
-        "start": "ts-node src/main.ts"
-    },
+    "scripts": {},
     "repository": {
         "type": "git",
         "url": "git+https://github.com/cs2browser-net/steam-ingress.git"
@@ -29,6 +27,7 @@
         "dotenv": "^17.2.4",
         "drizzle-orm": "^0.45.2",
         "expr-eval": "^2.0.2",
+        "ioredis": "^5.10.1",
         "maxmind": "^5.0.5",
         "mysql2": "^3.16.3",
         "pg": "^8.18.0",

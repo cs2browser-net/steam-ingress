@@ -1,10 +1,11 @@
-import type { Config, Rules } from "../types/config"
+import type { Config } from "../types/config"
 import type { ServerListResponse } from "../types/SteamAPI"
 import { buildFilters, evaluateExpression } from './filters'
 import http from "../http"
-import { serverCache } from "../cache";
 import { GetIPASN } from "./iplookup";
 import { AddServer } from "./store"
+import { AddressToBuffer } from "../utils/ipPreprocessor";
+import { log } from "../utils/console"
 
 const regions = ["0", "1", "2", "3", "4", "5", "6", "7", "255"]
 const serverRequestURL = `https://api.steampowered.com/IGameServersService/GetServerList/v1/?key={{STEAM_KEY}}&limit={{LIMIT}}&filter=`;
@@ -19,11 +20,11 @@ async function FilterRequest(cfg: Config, url: string) {
     if (typeof servers != "object") return;
 
     for (const server of servers) {
-        if (serverCache.has(server.addr)) continue;
+        var buffer = AddressToBuffer(server.addr);
 
         const { asn } = GetIPASN(server.addr.split(":")[0])
 
-        if (cfg.filtered_asn.includes(asn)) await AddServer(server.addr, 8)
+        if (cfg.filtered_asn.includes(asn)) await AddServer(server.addr, 8, buffer)
         else {
             let status = 0
 
@@ -32,14 +33,14 @@ async function FilterRequest(cfg: Config, url: string) {
                 if (status != 0) break;
             }
 
-            await AddServer(server.addr, status)
+            await AddServer(server.addr, status, buffer)
         }
     }
-    console.log(`Fetched '${servers.length}' servers from the API.`)
+    log(`Fetched '${servers.length}' servers from the API.`);
 }
 
 async function RequestInformations(region: string, token: string, cfg: Config) {
-    console.log(`Fetching servers for region '${region}'...`)
+    log(`Fetching servers for region '${region}'...`)
 
     for (const rule of cfg.retrieval_filters) {
         let filters = buildFilters(rule.filter)
