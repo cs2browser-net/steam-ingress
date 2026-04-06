@@ -20,6 +20,8 @@ const updateCache = async () => {
     const cacheQueue = [];
     for (const row of servers) {
         let buffer = AddressToBuffer(row.Address);
+        if (buffer == null) continue;
+
         cacheQueue.push(buffer);
 
         if (cacheQueue.length >= 1024) {

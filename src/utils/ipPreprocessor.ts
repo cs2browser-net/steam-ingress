@@ -1,15 +1,15 @@
-export function AddressToBuffer(addr: string): Buffer {
+export function AddressToBuffer(addr: string): Buffer | null {
     const parts = addr.split(":");
 
     if (parts.length !== 2) {
-        throw new Error("Invalid format. Expected IPv4:Port");
+        return null;
     }
 
     const [ip, portStr] = parts;
 
     const octets = ip.split(".");
     if (octets.length !== 4) {
-        throw new Error("Invalid IPv4 address");
+        return null;
     }
 
     const buf = Buffer.allocUnsafe(6);
@@ -18,7 +18,7 @@ export function AddressToBuffer(addr: string): Buffer {
         const octet = Number(octets[i]);
 
         if (!Number.isInteger(octet) || octet < 0 || octet > 255) {
-            throw new Error(`Invalid IPv4 octet: ${octets[i]}`);
+            return null;
         }
 
         buf[i] = octet;
@@ -27,7 +27,7 @@ export function AddressToBuffer(addr: string): Buffer {
     const port = Number(portStr);
 
     if (!Number.isInteger(port) || port < 0 || port > 65535) {
-        throw new Error(`Invalid port: ${portStr}`);
+        return null;
     }
 
     buf.writeUInt16BE(port, 4);
@@ -35,13 +35,13 @@ export function AddressToBuffer(addr: string): Buffer {
     return buf;
 }
 
-export function BufferToAdddress(buf: Buffer): string {
+export function BufferToAddress(buf: Buffer): string | null {
     if (!Buffer.isBuffer(buf)) {
-        throw new Error("Input must be a Buffer");
+        return null;
     }
 
     if (buf.length !== 6) {
-        throw new Error("Buffer must be exactly 6 bytes");
+        return null;
     }
 
     const ip = `${buf[0]}.${buf[1]}.${buf[2]}.${buf[3]}`;
