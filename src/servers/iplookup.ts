@@ -29,6 +29,47 @@ const GEOIP_REQUEST_TIMEOUT_MS = Number(process.env.GEOIP_REQUEST_TIMEOUT_MS ?? 
 const MAX_FRAME_SIZE = 16 * 1024 * 1024;
 const utf8Decoder = new TextDecoder("utf-8", { fatal: true });
 
+class ReusableBufferPool {
+    private readonly buckets = new Map<number, Buffer[]>();
+
+    constructor(
+        private readonly maxPerBucket: number,
+        private readonly minBucketSize: number,
+    ) { }
+
+    acquire(size: number): Buffer {
+        const bucketSize = this.normalizeBucketSize(size);
+        const bucket = this.buckets.get(bucketSize);
+        if (bucket && bucket.length > 0) {
+            return bucket.pop()!;
+        }
+
+        return Buffer.allocUnsafe(bucketSize);
+    }
+
+    release(buffer: Buffer): void {
+        const bucketSize = buffer.length;
+        let bucket = this.buckets.get(bucketSize);
+        if (!bucket) {
+            bucket = [];
+            this.buckets.set(bucketSize, bucket);
+        }
+
+        if (bucket.length < this.maxPerBucket) {
+            bucket.push(buffer);
+        }
+    }
+
+    private normalizeBucketSize(size: number): number {
+        let bucketSize = this.minBucketSize;
+        while (bucketSize < size) {
+            bucketSize <<= 1;
+        }
+
+        return bucketSize;
+    }
+}
+
 class PayloadReader {
     private offset = 0;
 
@@ -259,6 +300,7 @@ class GeoIPConnectionPool {
     private readonly connections: GeoIPConnection[];
     private readonly available: GeoIPConnection[];
     private readonly waiters: Array<(connection: GeoIPConnection) => void> = [];
+    private readonly requestBufferPool = new ReusableBufferPool(64, 32);
 
     constructor(
         host: string,
@@ -275,10 +317,12 @@ class GeoIPConnectionPool {
 
     async query(query: QueryByte, ip: string): Promise<QueryResponse> {
         const connection = await this.acquire();
+        const { frame, frameLength } = this.buildSingleQueryFrame(query, ip);
 
         try {
-            return await connection.request(this.buildSingleQueryFrame(query, ip));
+            return await connection.request(frame.subarray(0, frameLength));
         } finally {
+            this.requestBufferPool.release(frame);
             this.release(connection);
         }
     }
@@ -307,18 +351,19 @@ class GeoIPConnectionPool {
         this.available.push(connection);
     }
 
-    private buildSingleQueryFrame(query: QueryByte, ip: string): Buffer {
-        const ipBytes = Buffer.from(ip, "utf8");
-        if (ipBytes.length === 0 || ipBytes.length > 255) {
+    private buildSingleQueryFrame(query: QueryByte, ip: string): { frame: Buffer; frameLength: number } {
+        const ipByteLength = Buffer.byteLength(ip, "utf8");
+        if (ipByteLength === 0 || ipByteLength > 255) {
             throw new Error("GeoIP query IP length must be between 1 and 255 bytes");
         }
 
-        const frame = Buffer.allocUnsafe(2 + ipBytes.length);
+        const frameLength = 2 + ipByteLength;
+        const frame = this.requestBufferPool.acquire(frameLength);
         frame.writeUInt8(query, 0);
-        frame.writeUInt8(ipBytes.length, 1);
-        ipBytes.copy(frame, 2);
+        frame.writeUInt8(ipByteLength, 1);
+        frame.write(ip, 2, ipByteLength, "utf8");
 
-        return frame;
+        return { frame, frameLength };
     }
 }
 

@@ -20,21 +20,26 @@ async function FilterRequest(cfg: Config, url: string) {
     if (typeof servers != "object") return;
 
     for (const server of servers) {
-        var buffer = AddressToBuffer(server.addr);
-        if (!buffer) continue;
+        const pooledAddressBuffer = AddressToBuffer(server.addr);
+        if (!pooledAddressBuffer) continue;
 
-        const { asn } = await GetIPASN(server.addr)
+        try {
+            const { asn } = await GetIPASN(server.addr)
 
-        if (cfg.filtered_asn.includes(asn)) await AddServer(server.addr, 8, buffer)
-        else {
-            let status = 0
+            if (cfg.filtered_asn.includes(asn)) {
+                await AddServer(server.addr, 8, pooledAddressBuffer.buffer)
+            } else {
+                let status = 0
 
-            for (const expression of Object.keys(cfg.expressions)) {
-                status = evaluateExpression(cfg, expression, { ...server, tags: server.gametype.split(",") });
-                if (status != 0) break;
+                for (const expression of Object.keys(cfg.expressions)) {
+                    status = evaluateExpression(cfg, expression, { ...server, tags: server.gametype.split(",") });
+                    if (status != 0) break;
+                }
+
+                await AddServer(server.addr, status, pooledAddressBuffer.buffer)
             }
-
-            await AddServer(server.addr, status, buffer)
+        } finally {
+            pooledAddressBuffer.release();
         }
     }
     log(`Fetched '${servers.length}' servers from the API.`);
