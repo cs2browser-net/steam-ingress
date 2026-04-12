@@ -8,7 +8,7 @@ export const AddServer = async (ip: string, status: number, buffer: Buffer) => {
 
     await cacheClient.sadd(serversCacheKey, buffer);
 
-    const data = GetIPInfo(ip.split(":")[0])
+    const data = await GetIPInfo(ip)
 
     if (data.country == "cn" && ip.endsWith(":28000")) status = 9
 

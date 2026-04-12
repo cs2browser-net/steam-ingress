@@ -4,7 +4,6 @@
         "module": "commonjs",
         "outDir": "./dist/",
         "strict": true,
-        "moduleResolution": "node",
         "importHelpers": true,
         "experimentalDecorators": true,
         "esModuleInterop": true,
@@ -16,8 +15,7 @@
         "typeRoots": [
             "node_modules/@types"
         ],
-        "sourceMap": false,
-        "baseUrl": "./"
+        "sourceMap": false
     },
     "files": [
         "src/main.ts"

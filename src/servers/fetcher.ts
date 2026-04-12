@@ -21,8 +21,9 @@ async function FilterRequest(cfg: Config, url: string) {
 
     for (const server of servers) {
         var buffer = AddressToBuffer(server.addr);
+        if (!buffer) continue;
 
-        const { asn } = GetIPASN(server.addr.split(":")[0])
+        const { asn } = await GetIPASN(server.addr)
 
         if (cfg.filtered_asn.includes(asn)) await AddServer(server.addr, 8, buffer)
         else {
