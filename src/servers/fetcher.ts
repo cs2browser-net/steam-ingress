@@ -19,6 +19,15 @@ async function FilterRequest(cfg: Config, url: string) {
 	const { servers } = res.response;
 	if (typeof servers != "object") return;
 
+	const serversByAddr = new Map<string, number>();
+	for (const server of servers) {
+		const [ip, port] = server.addr.split(":");
+		if (!ip || !port) continue;
+
+		if (!serversByAddr.has(ip)) serversByAddr.set(ip, 1);
+		else serversByAddr.set(ip, serversByAddr.get(ip)! + 1);
+	}
+
 	const uniqueAddrs = [
 		...new Set(servers.map((server) => server.addr.split(":")[0])),
 	];
@@ -32,9 +41,11 @@ async function FilterRequest(cfg: Config, url: string) {
 		if (!pooledAddressBuffer) continue;
 
 		try {
-			const asn = asnByAddr.get(server.addr) ?? 0;
+			const ip = server.addr.split(":")[0];
+			const asn = asnByAddr.get(ip) ?? 0;
+			const serverCount = serversByAddr.get(ip) ?? 0;
 
-			if (cfg.filtered_asn.includes(asn)) {
+			if (cfg.filtered_asn.includes(asn) || serverCount > 15) {
 				await AddServer(server.addr, 8, pooledAddressBuffer.buffer);
 			} else {
 				let status = 0;
