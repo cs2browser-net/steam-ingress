@@ -52,7 +52,7 @@ const updateCache = async () => {
 };
 
 (async () => {
-	// await updateCache();
+	await updateCache();
 	await requestServers(cfg);
 	setInterval(async () => {
 		await requestServers(cfg);
