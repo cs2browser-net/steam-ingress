@@ -70,6 +70,9 @@ func renameStartsWithCalls(src string) string {
 var exprFunctions = []expr.Option{
 	expr.Function("number", func(p ...any) (any, error) { return jsNumber(p[0]), nil },
 		new(func(any) float64)),
+	expr.DisableBuiltin("string"),
+	expr.Function("string", func(p ...any) (any, error) { return steam.JSString(p[0]), nil },
+		new(func(any) string)),
 	expr.Function("_startsWith", func(p ...any) (any, error) {
 		return strings.HasPrefix(steam.JSString(p[0]), steam.JSString(p[1])), nil
 	}, new(func(any, any) bool)),

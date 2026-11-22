@@ -109,6 +109,15 @@ func TestProductionExpressions(t *testing.T) {
 		{func(s *steam.ServerInfo) { s.Name = "12.5" }, 3},
 		{func(s *steam.ServerInfo) { s.Name = "1e3" }, 0},  // JS: String(1000) != "1e3"
 		{func(s *steam.ServerInfo) { s.Name = " 42 " }, 0}, // JS: String(42) != " 42 "
+		{func(s *steam.ServerInfo) { s.Name = "1000000" }, 3},
+		{func(s *steam.ServerInfo) { s.Name = "1234567890" }, 3},
+		{func(s *steam.ServerInfo) { s.Name = "0.00001" }, 3},
+		{func(s *steam.ServerInfo) { s.Name = "Infinity" }, 3},
+		{func(s *steam.ServerInfo) { s.Name = "NaN" }, 3},
+		{func(s *steam.ServerInfo) { s.Name = "-5" }, 3},
+		{func(s *steam.ServerInfo) { s.Name = "-0" }, 0},   // JS: String(-0) == "0"
+		{func(s *steam.ServerInfo) { s.Name = "1e21" }, 0}, // JS: String(1e21) == "1e+21"
+		{func(s *steam.ServerInfo) { s.Name = "0x1F" }, 0},
 		{func(s *steam.ServerInfo) { s.Version = "1.39.1" }, 4},
 		{func(s *steam.ServerInfo) { s.Tags = []string{"insecure"} }, 8},
 		{func(s *steam.ServerInfo) { s.Secure = false }, 8},

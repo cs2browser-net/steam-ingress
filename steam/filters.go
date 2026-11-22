@@ -3,6 +3,7 @@ package steam
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -60,7 +61,7 @@ func JSString(v any) string {
 	case string:
 		return x
 	case float64:
-		return strconv.FormatFloat(x, 'f', -1, 64)
+		return jsNumberString(x)
 	case int:
 		return strconv.Itoa(x)
 	case nil:
@@ -68,4 +69,44 @@ func JSString(v any) string {
 	default:
 		return fmt.Sprint(x)
 	}
+}
+
+func jsNumberString(f float64) string {
+	switch {
+	case math.IsNaN(f):
+		return "NaN"
+	case math.IsInf(f, 1):
+		return "Infinity"
+	case math.IsInf(f, -1):
+		return "-Infinity"
+	case f == 0:
+		return "0"
+	}
+	sign := ""
+	if f < 0 {
+		sign, f = "-", -f
+	}
+
+	mant, exp, _ := strings.Cut(strconv.FormatFloat(f, 'e', -1, 64), "e")
+	digits := strings.Replace(mant, ".", "", 1)
+	e, _ := strconv.Atoi(exp)
+	k, n := len(digits), e+1
+
+	switch {
+	case k <= n && n <= 21:
+		return sign + digits + strings.Repeat("0", n-k)
+	case 0 < n && n <= 21:
+		return sign + digits[:n] + "." + digits[n:]
+	case -6 < n && n <= 0:
+		return sign + "0." + strings.Repeat("0", -n) + digits
+	}
+
+	s := digits[:1]
+	if k > 1 {
+		s += "." + digits[1:]
+	}
+	if e >= 0 {
+		return sign + s + "e+" + strconv.Itoa(e)
+	}
+	return sign + s + "e-" + strconv.Itoa(-e)
 }

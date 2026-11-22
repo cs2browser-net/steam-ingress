@@ -69,7 +69,11 @@ func main() {
 		time.Duration(envInt("GEOIP_REQUEST_TIMEOUT_MS", 2500, 1, 1<<31-1))*time.Millisecond,
 	)
 
-	st := store.New(db, cache, cacheKey, geo)
+	dryRun, _ := strconv.ParseBool(os.Getenv("DRY_RUN"))
+	if dryRun {
+		logger.Printf("DRY RUN: inserts and cache writes are printed, not executed")
+	}
+	st := store.New(db, cache, cacheKey, geo, dryRun)
 
 	f, err := fetcher.New(cfg, st, geo)
 	if err != nil {

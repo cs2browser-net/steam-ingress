@@ -15,17 +15,27 @@ import (
 	"github.com/cs2browser-net/steam-ingress/logger"
 )
 
-const cacheBatchSize = 1024
+const (
+	cacheBatchSize = 1024
+
+	selectAddresses = `SELECT "Address" FROM "Server"`
+	insertServer    = `INSERT INTO "Server" ("ID", "Address", "Status", "Country", "Latitute", "Longitude")
+ VALUES ($1, $2, $3, $4, $5, $6)
+ ON CONFLICT ("Address") DO NOTHING`
+)
 
 type Store struct {
 	db       *pgxpool.Pool
 	cache    *redis.Client
 	cacheKey string
 	geo      *geoip.Client
+
+	dryRun bool
+	seen   map[string]struct{}
 }
 
-func New(db *pgxpool.Pool, cache *redis.Client, cacheKey string, geo *geoip.Client) *Store {
-	return &Store{db: db, cache: cache, cacheKey: cacheKey, geo: geo}
+func New(db *pgxpool.Pool, cache *redis.Client, cacheKey string, geo *geoip.Client, dryRun bool) *Store {
+	return &Store{db: db, cache: cache, cacheKey: cacheKey, geo: geo, dryRun: dryRun, seen: map[string]struct{}{}}
 }
 
 func AddressKey(addr string) ([]byte, bool) {
@@ -41,7 +51,7 @@ func AddressKey(addr string) ([]byte, bool) {
 }
 
 func (s *Store) WarmCache(ctx context.Context) error {
-	rows, err := s.db.Query(ctx, `SELECT "Address" FROM "Server"`)
+	rows, err := s.db.Query(ctx, selectAddresses)
 	if err != nil {
 		return err
 	}
@@ -57,6 +67,10 @@ func (s *Store) WarmCache(ctx context.Context) error {
 		if !ok {
 			continue
 		}
+		if s.dryRun {
+			s.seen[string(key)] = struct{}{}
+			continue
+		}
 		batch = append(batch, key)
 		if len(batch) == cacheBatchSize {
 			if err := s.cache.SAdd(ctx, s.cacheKey, batch...).Err(); err != nil {
@@ -65,6 +79,10 @@ func (s *Store) WarmCache(ctx context.Context) error {
 			batch = batch[:0]
 		}
 	}
+	if s.dryRun {
+		logger.Printf("DRY RUN redis: SADD %s <%d known addresses, 6-byte keys, batches of %d>", s.cacheKey, len(s.seen), cacheBatchSize)
+		return nil
+	}
 	if len(batch) > 0 {
 		return s.cache.SAdd(ctx, s.cacheKey, batch...).Err()
 	}
@@ -72,8 +90,13 @@ func (s *Store) WarmCache(ctx context.Context) error {
 }
 
 func (s *Store) AddServer(ctx context.Context, addr string, status int, key []byte) error {
-	added, err := s.cache.SAdd(ctx, s.cacheKey, key).Result()
-	if err != nil || added == 0 {
+	if s.dryRun {
+		if _, dup := s.seen[string(key)]; dup {
+			return nil
+		}
+		s.seen[string(key)] = struct{}{}
+		logger.Printf("DRY RUN redis: SADD %s %x", s.cacheKey, key)
+	} else if added, err := s.cache.SAdd(ctx, s.cacheKey, key).Result(); err != nil || added == 0 {
 		return err
 	}
 
@@ -82,13 +105,15 @@ func (s *Store) AddServer(ctx context.Context, addr string, status int, key []by
 		status = 9
 	}
 
-	_, err = s.db.Exec(ctx,
-		`INSERT INTO "Server" ("ID", "Address", "Status", "Country", "Latitute", "Longitude")
-		 VALUES ($1, $2, $3, $4, $5, $6)
-		 ON CONFLICT ("Address") DO NOTHING`,
-		uuid.NewString(), addr, status, city.Country, city.Latitude, city.Longitude)
-	if err != nil {
-		s.cache.SRem(context.WithoutCancel(ctx), s.cacheKey, key)
+	args := []any{uuid.NewString(), addr, status, city.Country, city.Latitude, city.Longitude}
+	if s.dryRun {
+		logger.Printf("DRY RUN sql: %s\n  args: %v", insertServer, args)
+		return nil
 	}
-	return err
+
+	if _, err := s.db.Exec(ctx, insertServer, args...); err != nil {
+		s.cache.SRem(context.WithoutCancel(ctx), s.cacheKey, key)
+		return err
+	}
+	return nil
 }

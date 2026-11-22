@@ -47,6 +47,7 @@ Copy [`.env.example`](.env.example) to `.env` (or set real environment variables
 | `GEOIP_PORT`               | `8081`      | GeoIP service port                           |
 | `GEOIP_POOL_SIZE`          | `12`        | Concurrent GeoIP connections                 |
 | `GEOIP_REQUEST_TIMEOUT_MS` | `2500`      | Per-request GeoIP timeout                    |
+| `DRY_RUN`                  | `false`     | `true` prints the `INSERT`s and Redis writes instead of running them (see [Dry run](#dry-run)) |
 
 `data/config.json`:
 
@@ -87,6 +88,10 @@ Expressions use [expr-lang](https://expr-lang.org). The variables are `addr`, `g
 ```
 
 On start it loads every address from the `Server` table into Redis, then polls until `Ctrl+C` / `SIGTERM`, which cancels the request in flight and exits.
+
+## Dry run
+
+`DRY_RUN=true ./steam-ingress` logs every write as `DRY RUN sql: ...` (with its arguments) or `DRY RUN redis: ...` and sends nothing to PostgreSQL or Redis. It still runs the `SELECT` that lists known servers, queries Steam and the GeoIP service, and keeps its own in-memory list of seen addresses, so each new server is printed once.
 
 ## Layout
 
