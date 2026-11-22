@@ -1,3 +1,6 @@
 .env
-node_modules/
 data/config.json
+/steam-ingress
+/steam-ingress.exe
+out/
+release/
